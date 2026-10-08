@@ -11,17 +11,48 @@ import {
 } from 'remotion';
 import type { EditPlan, Clip } from '@editor/edit-schema';
 
-/** Fades a clip in over its transition duration, relative to the clip's own Sequence. */
+/** Animates a clip in over its transition duration, relative to the clip's own Sequence. */
 function TransitionWrapper({ clip, children }: { clip: Clip; children: React.ReactNode }) {
   const frame = useCurrentFrame();
-  if (clip.transition?.type !== 'fade' || clip.transition.durationFrames === 0) {
+  const transition = clip.transition;
+  if (!transition || transition.type === 'none' || transition.durationFrames === 0) {
     return <>{children}</>;
   }
-  const opacity = interpolate(frame, [0, clip.transition.durationFrames], [0, 1], {
+
+  const progress = interpolate(frame, [0, transition.durationFrames], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  return <div style={{ opacity, width: '100%', height: '100%' }}>{children}</div>;
+
+  if (transition.type === 'fade') {
+    return <div style={{ opacity: progress, width: '100%', height: '100%' }}>{children}</div>;
+  }
+
+  if (transition.type === 'wipe') {
+    const revealedPercent = progress * 100;
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          clipPath: `inset(0 ${100 - revealedPercent}% 0 0)`,
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  if (transition.type === 'slide') {
+    const offsetPercent = (1 - progress) * 100;
+    return (
+      <div style={{ width: '100%', height: '100%', transform: `translateX(${offsetPercent}%)` }}>
+        {children}
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 
 export interface EditPlanCompositionProps {

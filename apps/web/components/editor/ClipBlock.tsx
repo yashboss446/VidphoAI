@@ -1,10 +1,20 @@
 'use client';
 
 import { useRef } from 'react';
+import { Film, Image as ImageIcon, Music, Type } from 'lucide-react';
 import type { Clip } from '@editor/edit-schema';
-import { framesToPixels, PIXELS_PER_FRAME, TRACK_COLORS } from '@/lib/timeline';
+import { framesToPixels, PIXELS_PER_FRAME, TRACK_GRADIENTS } from '@/lib/timeline';
+import { cn } from '@/lib/cn';
+import { Waveform } from './Waveform';
 
 const MIN_DURATION_FRAMES = 2;
+
+const KIND_ICON = {
+  video: Film,
+  image: ImageIcon,
+  audio: Music,
+  text: Type,
+} as const;
 
 export function ClipBlock({
   clip,
@@ -12,12 +22,14 @@ export function ClipBlock({
   isSelected,
   onSelect,
   onChange,
+  assetUrl,
 }: {
   clip: Clip;
   trackType: string;
   isSelected: boolean;
   onSelect: () => void;
   onChange: (patch: Partial<Clip>) => void;
+  assetUrl?: string;
 }) {
   const dragState = useRef<{
     mode: 'move' | 'trim-start' | 'trim-end';
@@ -70,7 +82,8 @@ export function ClipBlock({
     window.removeEventListener('pointerup', onPointerUp);
   }
 
-  const color = TRACK_COLORS[trackType] ?? '#6366f1';
+  const gradient = TRACK_GRADIENTS[trackType] ?? TRACK_GRADIENTS.video;
+  const Icon = KIND_ICON[clip.kind];
 
   return (
     <div
@@ -79,22 +92,31 @@ export function ClipBlock({
         position: 'absolute',
         left: framesToPixels(clip.startFrame),
         width: framesToPixels(clip.durationFrames),
-        backgroundColor: color,
+        backgroundImage: gradient,
       }}
-      className={`group h-full cursor-grab rounded-md opacity-90 ring-2 ${
-        isSelected ? 'ring-white' : 'ring-transparent'
-      }`}
+      className={cn(
+        'group h-full cursor-grab select-none overflow-hidden rounded-lg shadow-sm ring-2 ring-transparent transition-all active:cursor-grabbing',
+        isSelected && 'shadow-glow ring-white/80',
+      )}
     >
+      {clip.kind === 'audio' && assetUrl && (
+        <div className="absolute inset-0 px-1 py-1.5 opacity-70">
+          <Waveform url={assetUrl} />
+        </div>
+      )}
       <div
         onPointerDown={(e) => beginDrag('trim-start', e)}
-        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize bg-black/30 opacity-0 group-hover:opacity-100"
+        className="absolute left-0 top-0 z-10 h-full w-2 cursor-ew-resize rounded-l-lg bg-white/0 transition-colors hover:bg-white/30"
       />
-      <div className="truncate px-2 py-1 text-xs font-medium text-black/80">
-        {clip.kind === 'text' ? clip.text : clip.kind}
+      <div className="relative z-[1] flex h-full items-center gap-1.5 overflow-hidden px-2.5">
+        <Icon size={11} className="flex-shrink-0 text-white/80" />
+        <span className="truncate text-xs font-medium text-white">
+          {clip.kind === 'text' ? clip.text : clip.kind}
+        </span>
       </div>
       <div
         onPointerDown={(e) => beginDrag('trim-end', e)}
-        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-black/30 opacity-0 group-hover:opacity-100"
+        className="absolute right-0 top-0 z-10 h-full w-2 cursor-ew-resize rounded-r-lg bg-white/0 transition-colors hover:bg-white/30"
       />
     </div>
   );

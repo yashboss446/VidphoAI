@@ -13,3 +13,4 @@ Thumbs.db
 /packages/*/dist/
 .pnpm-store/
 *.tsbuildinfo
+.debug-tmp/

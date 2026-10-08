@@ -15,6 +15,7 @@ interface EditStoreState {
   addClip: (trackId: string, clip: Clip) => void;
   updateClip: (trackId: string, clipId: string, patch: Partial<Clip>) => void;
   removeClip: (trackId: string, clipId: string) => void;
+  setCanvasSize: (width: number, height: number) => void;
   selectClip: (clipId: string | null) => void;
   undo: () => void;
   redo: () => void;
@@ -66,6 +67,11 @@ export const useEditStore = create<EditStoreState>((set, get) => ({
       t.id === trackId ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) } : t,
     );
     set((state) => withHistory(state, { ...plan, tracks }));
+  },
+
+  setCanvasSize: (width, height) => {
+    const { plan } = get();
+    set((state) => withHistory(state, { ...plan, width, height }));
   },
 
   selectClip: (clipId) => set({ selectedClipId: clipId }),

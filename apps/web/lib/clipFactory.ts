@@ -1,4 +1,4 @@
-import type { Clip, EditPlan, Track } from '@editor/edit-schema';
+import { generateId, type Clip, type EditPlan, type Track } from '@editor/edit-schema';
 import type { UploadedAsset } from '@/components/editor/UploadDropzone';
 
 export function trackByType(plan: EditPlan, type: Track['type']): Track {
@@ -12,7 +12,7 @@ function trackEndFrame(track: Track): number {
 }
 
 export function clipForAsset(plan: EditPlan, asset: UploadedAsset): { trackType: Track['type']; clip: Clip } {
-  const id = crypto.randomUUID();
+  const id = generateId();
 
   if (asset.kind === 'video') {
     const track = trackByType(plan, 'video');
@@ -69,7 +69,7 @@ export function clipForAsset(plan: EditPlan, asset: UploadedAsset): { trackType:
 
 export function newTextClip(plan: EditPlan): Clip {
   return {
-    id: crypto.randomUUID(),
+    id: generateId(),
     kind: 'text',
     startFrame: 0,
     durationFrames: plan.fps * 3,

@@ -20,8 +20,15 @@ Login/session state is NOT handled by `next-auth/react` here, because the backen
 
 Cross-origin cookies work here because the frontend and backend are meant to live on subdomains of the same registrable domain (e.g. `app.yourdomain.com` / `api.yourdomain.com`) — that makes the session cookie's default `SameSite=Lax` sufficient (no `SameSite=None`/third-party-cookie complexity needed), since subdomains of one domain count as the same "site" for that purpose.
 
+## Editor features
+
+- **Aspect ratio** (`CanvasRatioControl`) — 9:16, 1:1, 4:5, 16:9. Sets `EditPlan.width`/`height` directly; no backend change needed.
+- **Export resolution** (`ExportButton`) — 720p/1080p/2K/4K, independent of the editing canvas. Sent to the backend as `resolution` on `POST /api/render`.
+- **Transitions** — fade, wipe, and slide, all rendered for real (see `packages/remotion-composition`), with an adjustable duration.
+- **Audio waveform** (`lib/waveform.ts`, `components/editor/Waveform.tsx`) — decoded client-side via the Web Audio API and cached per asset; shown inside audio clips on the timeline.
+- **AI chat box** (`components/editor/ChatPanel.tsx`) — calls the backend's `/api/projects/:id/chat`. Shows a plain-language notice if the backend reports AI editing isn't configured yet, rather than a fake response.
+
 ## Known limitations of this slice
 
-- No chat/AI editing yet (Phase 2).
-- No generative AI provider integrations yet (Phase 2, requires your own API keys on the backend).
+- No generative AI provider integrations yet (requires your own API keys on the backend).
 - Remotion is used under its free tier terms for now — revisit its company licensing before any commercial launch.

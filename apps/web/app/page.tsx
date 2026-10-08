@@ -5,6 +5,12 @@ import { useAuth } from '@/lib/AuthProvider';
 import { apiFetch } from '@/lib/apiClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Plus, LogOut, Clapperboard, Film } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
+import { Button } from '@/components/ui/Button';
+import { formatRelativeTime } from '@/lib/time';
+import { gradientFromId } from '@/lib/colorFromId';
 
 interface ProjectSummary {
   id: string;
@@ -29,39 +35,96 @@ export default function DashboardPage() {
   }, [status]);
 
   if (status !== 'authenticated') {
-    return <p className="p-6 text-white/60">Loading…</p>;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-surface">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-panel-border border-t-accent" />
+      </main>
+    );
   }
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Your projects</h1>
-        <div className="flex items-center gap-3">
-          <Link href="/projects/new" className="rounded-md bg-accent px-3 py-2 text-sm font-medium">
-            New project
-          </Link>
-          <button onClick={() => logout()} className="text-sm text-white/50 hover:underline">
-            Sign out
+    <main className="min-h-screen bg-surface">
+      <header className="sticky top-0 z-10 border-b border-panel-border/60 bg-surface/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <Logo size="sm" />
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
+          >
+            <LogOut size={15} /> Sign out
           </button>
         </div>
       </header>
 
-      {projects.length === 0 ? (
-        <p className="text-white/40">No projects yet. Create one to get started.</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {projects.map((project) => (
-            <li key={project.id}>
-              <Link
-                href={`/projects/${project.id}`}
-                className="block rounded-md bg-panel p-3 ring-1 ring-white/10 hover:ring-accent"
+      <div className="mx-auto max-w-5xl px-6 py-10">
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-semibold text-ink">Your projects</h1>
+            <p className="mt-1 text-sm text-ink-muted">
+              {projects.length > 0
+                ? `${projects.length} project${projects.length === 1 ? '' : 's'}`
+                : 'Nothing here yet — start your first edit.'}
+            </p>
+          </div>
+          <Link href="/projects/new">
+            <Button icon={<Plus size={16} />}>New project</Button>
+          </Link>
+        </div>
+
+        {projects.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project, i) => (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: i * 0.04 }}
               >
-                {project.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                <Link
+                  href={`/projects/${project.id}`}
+                  className="group block overflow-hidden rounded-2xl border border-panel-border bg-panel/50 transition-all hover:-translate-y-1 hover:border-white/15 hover:shadow-panel"
+                >
+                  <div
+                    className={`relative flex h-32 items-center justify-center bg-gradient-to-br ${gradientFromId(project.id)}`}
+                  >
+                    <Clapperboard className="h-9 w-9 text-white/90 transition-transform group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-black/10 transition-opacity group-hover:opacity-0" />
+                  </div>
+                  <div className="p-4">
+                    <p className="truncate font-medium text-ink">{project.name}</p>
+                    <p className="mt-0.5 text-xs text-ink-faint">
+                      Edited {formatRelativeTime(project.updatedAt)}
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
+  );
+}
+
+function EmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="mt-8 flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-panel-border bg-panel/30 py-20 text-center"
+    >
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-brand/20">
+        <Film className="h-7 w-7 text-accent-violet" />
+      </div>
+      <div>
+        <p className="font-medium text-ink">No projects yet</p>
+        <p className="mt-1 text-sm text-ink-muted">Upload your first clips and start editing.</p>
+      </div>
+      <Link href="/projects/new">
+        <Button icon={<Plus size={16} />}>Create your first project</Button>
+      </Link>
+    </motion.div>
   );
 }
