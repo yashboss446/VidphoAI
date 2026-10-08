@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/lib/AuthProvider';
+import { apiFetch } from '@/lib/apiClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -12,7 +13,7 @@ interface ProjectSummary {
 }
 
 export default function DashboardPage() {
-  const { status } = useSession();
+  const { status, logout } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
 
@@ -22,7 +23,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    fetch('/api/projects')
+    apiFetch('/api/projects')
       .then((res) => res.json())
       .then((data) => setProjects(data.projects ?? []));
   }, [status]);
@@ -39,7 +40,7 @@ export default function DashboardPage() {
           <Link href="/projects/new" className="rounded-md bg-accent px-3 py-2 text-sm font-medium">
             New project
           </Link>
-          <button onClick={() => signOut()} className="text-sm text-white/50 hover:underline">
+          <button onClick={() => logout()} className="text-sm text-white/50 hover:underline">
             Sign out
           </button>
         </div>

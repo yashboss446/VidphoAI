@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/lib/AuthProvider';
+import { apiFetch } from '@/lib/apiClient';
 import { useRouter } from 'next/navigation';
 import { useEditStore } from '@/lib/editStore';
 import { trackByType, clipForAsset, newTextClip } from '@/lib/clipFactory';
@@ -15,7 +16,7 @@ import type { Clip } from '@editor/edit-schema';
 
 export default function EditorPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
-  const { status } = useSession();
+  const { status } = useAuth();
   const router = useRouter();
 
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
@@ -38,8 +39,8 @@ export default function EditorPage({ params }: { params: { projectId: string } }
   useEffect(() => {
     async function load() {
       const [mediaRes, planRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}/media`),
-        fetch(`/api/projects/${projectId}/editplan`),
+        apiFetch(`/api/projects/${projectId}/media`),
+        apiFetch(`/api/projects/${projectId}/editplan`),
       ]);
       if (mediaRes.ok) {
         const { mediaAssets } = await mediaRes.json();

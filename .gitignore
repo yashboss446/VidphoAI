@@ -10,11 +10,6 @@ out/
 .DS_Store
 Thumbs.db
 /apps/web/.next/
-/apps/render-worker/dist/
 /packages/*/dist/
 .pnpm-store/
-minio-data/
-postgres-data/
-__pycache__/
-*.pyc
-.venv/
+*.tsbuildinfo

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { EditPlan } from '@editor/edit-schema';
+import { apiFetch } from '@/lib/apiClient';
 
 type RenderStatus = 'idle' | 'saving' | 'queued' | 'processing' | 'completed' | 'failed';
 
@@ -16,7 +17,7 @@ export function ExportButton({ projectId, editPlan }: { projectId: string; editP
     setDownloadUrl(null);
     setStatus('saving');
     try {
-      const saveRes = await fetch(`/api/projects/${projectId}/editplan`, {
+      const saveRes = await apiFetch(`/api/projects/${projectId}/editplan`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ editPlan }),
@@ -24,7 +25,7 @@ export function ExportButton({ projectId, editPlan }: { projectId: string; editP
       if (!saveRes.ok) throw new Error('Failed to save edit plan');
       const { recordId } = await saveRes.json();
 
-      const renderRes = await fetch('/api/render', {
+      const renderRes = await apiFetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId, editPlanRecordId: recordId }),
@@ -34,7 +35,7 @@ export function ExportButton({ projectId, editPlan }: { projectId: string; editP
       setStatus('queued');
 
       pollRef.current = setInterval(async () => {
-        const pollRes = await fetch(`/api/render/${renderJob.id}`);
+        const pollRes = await apiFetch(`/api/render/${renderJob.id}`);
         if (!pollRes.ok) return;
         const { renderJob: updated, downloadUrl: url } = await pollRes.json();
         setStatus(updated.status);

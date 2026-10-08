@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useAuth } from '@/lib/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -16,9 +17,9 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await signIn('credentials', { email, password, redirect: false });
+    const ok = await login(email, password);
     setLoading(false);
-    if (res?.error) {
+    if (!ok) {
       setError('Invalid email or password.');
       return;
     }

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { apiFetch } from '@/lib/apiClient';
 
 export interface UploadedAsset {
   id: string;
@@ -31,7 +32,7 @@ export function UploadDropzone({
       for (const file of files) {
         setUploading((u) => [...u, file.name]);
         try {
-          const presignRes = await fetch(`/api/projects/${projectId}/upload`, {
+          const presignRes = await apiFetch(`/api/projects/${projectId}/upload`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filename: file.name, contentType: file.type }),
@@ -46,7 +47,7 @@ export function UploadDropzone({
           });
           if (!putRes.ok) throw new Error('Upload to storage failed');
 
-          const registerRes = await fetch(`/api/projects/${projectId}/media`, {
+          const registerRes = await apiFetch(`/api/projects/${projectId}/media`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, filename: file.name, contentType: file.type }),

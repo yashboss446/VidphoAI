@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useAuth } from '@/lib/AuthProvider';
+import { apiFetch } from '@/lib/apiClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +19,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await fetch('/api/register', {
+    const res = await apiFetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
@@ -28,7 +30,7 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
-    await signIn('credentials', { email, password, redirect: false });
+    await login(email, password);
     setLoading(false);
     router.push('/');
   }
