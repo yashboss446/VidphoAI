@@ -1,0 +1,24 @@
+{
+  "name": "ai-video-editor",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @editor/db run generate",
+    "db:migrate": "pnpm --filter @editor/db run migrate:dev",
+    "setup:bucket": "node scripts/create-bucket.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.0",
+    "prettier": "^3.3.0",
+    "@aws-sdk/client-s3": "^3.658.0",
+    "dotenv": "^16.4.5"
+  }
+}
