@@ -106,6 +106,9 @@ importers:
       '@editor/edit-schema':
         specifier: workspace:*
         version: link:../edit-schema
+      '@remotion/google-fonts':
+        specifier: 4.0.526
+        version: 4.0.526(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -425,6 +428,9 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@remotion/google-fonts@4.0.526':
+    resolution: {integrity: sha512-n+dvQsjunlCyeEuGv6cS56sWXwZmgTO4+iLQJNsqb6MceTiMuiPx/PyG+p1KUJLMk9j2521R90dujRFHZZXfJg==}
 
   '@remotion/player@4.0.526':
     resolution: {integrity: sha512-evzxsYzsI8rDxdNQFbkWLoXqzOssrgQuxAUHzyqTB29arBq8gD/Ic1YQMMypYVecdpeJGs+OsoEj31zxKlrsDw==}
@@ -2362,6 +2368,13 @@ snapshots:
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@remotion/google-fonts@4.0.526(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      remotion: 4.0.526(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@remotion/player@4.0.526(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:

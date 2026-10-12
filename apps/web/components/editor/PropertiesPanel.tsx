@@ -1,81 +1,64 @@
 'use client';
 
-import type { Clip } from '@editor/edit-schema';
-import { Trash2, Type, Volume2, Move3d, Sparkles, MousePointer2 } from 'lucide-react';
+import type { Clip, FilterPreset, TextFontFamily } from '@editor/edit-schema';
+import {
+  Trash2,
+  Type,
+  Volume2,
+  Move3d,
+  Sparkles,
+  MousePointer2,
+  FlipHorizontal2,
+  FlipVertical2,
+  Gauge,
+  Palette,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Bold,
+  Italic,
+  PenLine,
+  Highlighter,
+  Wand2,
+  Music,
+  Activity,
+} from 'lucide-react';
+import { Section, Field, fieldInputClass, Segmented, ToggleButton } from './controls';
+import { TransitionEditor } from './TransitionEditor';
 import { cn } from '@/lib/cn';
 
-function Section({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-b border-panel-border/60 pb-5 last:border-0 last:pb-0">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-        {icon}
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
+const FILTER_LABELS: Record<FilterPreset, string> = {
+  none: 'None',
+  warm: 'Warm',
+  cool: 'Cool',
+  vintage: 'Vintage',
+  bw: 'B&W',
+  vivid: 'Vivid',
+  fade: 'Fade',
+  matte: 'Matte',
+};
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs text-ink-muted">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function fieldInputClass(extra = '') {
-  return cn(
-    'h-9 rounded-lg border border-panel-border bg-panel/60 px-2.5 text-sm text-ink outline-none transition-colors focus:border-accent/60 focus:ring-2 focus:ring-accent/20',
-    extra,
-  );
-}
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="inline-flex rounded-lg border border-panel-border bg-panel/60 p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            'rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
-            value === opt.value ? 'bg-gradient-brand text-white' : 'text-ink-muted hover:text-ink',
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+const FONT_LABELS: Record<TextFontFamily, string> = {
+  inter: 'Inter',
+  sora: 'Sora',
+  poppins: 'Poppins',
+  bebasNeue: 'Bebas Neue',
+  caveat: 'Caveat',
+  playfairDisplay: 'Playfair Display',
+};
 
 export function PropertiesPanel({
   clip,
   onChange,
   onDelete,
+  snapToBeatsActive,
+  onToggleSnapToBeats,
 }: {
   clip: Clip | null;
   onChange: (patch: Partial<Clip>) => void;
   onDelete: () => void;
+  snapToBeatsActive?: boolean;
+  onToggleSnapToBeats?: () => void;
 }) {
   if (!clip) {
     return (
@@ -85,6 +68,8 @@ export function PropertiesPanel({
       </div>
     );
   }
+
+  const hasVisualFilter = clip.kind === 'video' || clip.kind === 'image';
 
   return (
     <div className="flex flex-col gap-5">
@@ -131,7 +116,70 @@ export function PropertiesPanel({
               />
             </Field>
           </div>
-          <Field label="Position">
+          <Field label="Font">
+            <select
+              value={clip.style.fontFamily}
+              onChange={(e) =>
+                onChange({ style: { ...clip.style, fontFamily: e.target.value as TextFontFamily } } as Partial<Clip>)
+              }
+              className={fieldInputClass('cursor-pointer')}
+            >
+              {(Object.keys(FONT_LABELS) as TextFontFamily[]).map((f) => (
+                <option key={f} value={f}>
+                  {FONT_LABELS[f]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="flex items-center gap-2">
+            <ToggleButton
+              active={clip.style.fontWeight === 'bold'}
+              onClick={() =>
+                onChange({
+                  style: { ...clip.style, fontWeight: clip.style.fontWeight === 'bold' ? 'normal' : 'bold' },
+                } as Partial<Clip>)
+              }
+              title="Bold"
+            >
+              <Bold size={14} />
+            </ToggleButton>
+            <ToggleButton
+              active={clip.style.italic}
+              onClick={() => onChange({ style: { ...clip.style, italic: !clip.style.italic } } as Partial<Clip>)}
+              title="Italic"
+            >
+              <Italic size={14} />
+            </ToggleButton>
+            <ToggleButton
+              active={!!clip.style.stroke}
+              onClick={() =>
+                onChange({
+                  style: {
+                    ...clip.style,
+                    stroke: clip.style.stroke ? undefined : { width: 2, color: '#000000' },
+                  },
+                } as Partial<Clip>)
+              }
+              title="Outline"
+            >
+              <PenLine size={14} />
+            </ToggleButton>
+            <ToggleButton
+              active={!!clip.style.background}
+              onClick={() =>
+                onChange({
+                  style: {
+                    ...clip.style,
+                    background: clip.style.background ? undefined : { color: '#000000', opacity: 0.5 },
+                  },
+                } as Partial<Clip>)
+              }
+              title="Background highlight"
+            >
+              <Highlighter size={14} />
+            </ToggleButton>
+          </div>
+          <Field label="Vertical position">
             <Segmented
               value={clip.style.position}
               onChange={(position) => onChange({ style: { ...clip.style, position } } as Partial<Clip>)}
@@ -142,16 +190,139 @@ export function PropertiesPanel({
               ]}
             />
           </Field>
+          <Field label="Alignment">
+            <Segmented
+              value={clip.style.align}
+              onChange={(align) => onChange({ style: { ...clip.style, align } } as Partial<Clip>)}
+              options={[
+                { value: 'left', label: <AlignLeft size={13} />, title: 'Align left' },
+                { value: 'center', label: <AlignCenter size={13} />, title: 'Align center' },
+                { value: 'right', label: <AlignRight size={13} />, title: 'Align right' },
+              ]}
+            />
+          </Field>
+          <Field label={`Letter spacing — ${clip.style.letterSpacing}px`}>
+            <input
+              type="range"
+              min={-2}
+              max={20}
+              step={0.5}
+              value={clip.style.letterSpacing}
+              onChange={(e) =>
+                onChange({ style: { ...clip.style, letterSpacing: Number(e.target.value) } } as Partial<Clip>)
+              }
+              style={{ accentColor: '#8b5cf6' }}
+              className="h-1.5 w-full cursor-pointer"
+            />
+          </Field>
+          <Field label="Animation">
+            <div className="flex items-center gap-2">
+              <Wand2 size={13} className="flex-shrink-0 text-ink-faint" />
+              <select
+                value={clip.style.animation}
+                onChange={(e) => onChange({ style: { ...clip.style, animation: e.target.value as typeof clip.style.animation } } as Partial<Clip>)}
+                className={fieldInputClass('w-full cursor-pointer')}
+              >
+                <option value="none">None</option>
+                <option value="typewriter">Typewriter</option>
+                <option value="wordFade">Word fade-in</option>
+                <option value="popIn">Pop in</option>
+                <option value="bounceIn">Bounce in</option>
+                <option value="slideIn">Slide in</option>
+              </select>
+            </div>
+          </Field>
         </Section>
       )}
 
-      {(clip.kind === 'video' || clip.kind === 'audio') && (
+      {hasVisualFilter && (
+        <Section title="Filters & flip" icon={<Palette size={12} />}>
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(FILTER_LABELS) as FilterPreset[]).map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => onChange({ filter: preset } as Partial<Clip>)}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  clip.filter === preset
+                    ? 'bg-gradient-brand text-white'
+                    : 'border border-panel-border bg-panel/60 text-ink-muted hover:text-ink',
+                )}
+              >
+                {FILTER_LABELS[preset]}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={`Brightness — ${clip.brightness}%`}>
+              <input
+                type="range"
+                min={0}
+                max={200}
+                step={1}
+                value={clip.brightness}
+                onChange={(e) => onChange({ brightness: Number(e.target.value) } as Partial<Clip>)}
+                style={{ accentColor: '#8b5cf6' }}
+                className="h-1.5 w-full cursor-pointer"
+              />
+            </Field>
+            <Field label={`Contrast — ${clip.contrast}%`}>
+              <input
+                type="range"
+                min={0}
+                max={200}
+                step={1}
+                value={clip.contrast}
+                onChange={(e) => onChange({ contrast: Number(e.target.value) } as Partial<Clip>)}
+                style={{ accentColor: '#8b5cf6' }}
+                className="h-1.5 w-full cursor-pointer"
+              />
+            </Field>
+          </div>
+          <div className="flex items-center gap-2">
+            <ToggleButton
+              active={clip.flipHorizontal}
+              onClick={() => onChange({ flipHorizontal: !clip.flipHorizontal } as Partial<Clip>)}
+              title="Mirror horizontally"
+            >
+              <FlipHorizontal2 size={14} />
+            </ToggleButton>
+            <ToggleButton
+              active={clip.flipVertical}
+              onClick={() => onChange({ flipVertical: !clip.flipVertical } as Partial<Clip>)}
+              title="Mirror vertically"
+            >
+              <FlipVertical2 size={14} />
+            </ToggleButton>
+          </div>
+        </Section>
+      )}
+
+      {clip.kind === 'video' && (
+        <Section title="Speed" icon={<Gauge size={12} />}>
+          <Field label={`Playback speed — ${clip.speed.toFixed(2)}x`}>
+            <input
+              type="range"
+              min={0.25}
+              max={4}
+              step={0.25}
+              value={clip.speed}
+              onChange={(e) => onChange({ speed: Number(e.target.value) } as Partial<Clip>)}
+              style={{ accentColor: '#8b5cf6' }}
+              className="h-1.5 w-full cursor-pointer"
+            />
+          </Field>
+        </Section>
+      )}
+
+      {clip.kind === 'video' && (
         <Section title="Audio" icon={<Volume2 size={12} />}>
           <Field label={`Volume — ${Math.round(clip.volume * 100)}%`}>
             <input
               type="range"
               min={0}
-              max={1}
+              max={2}
               step={0.05}
               value={clip.volume}
               onChange={(e) => onChange({ volume: Number(e.target.value) } as Partial<Clip>)}
@@ -161,6 +332,79 @@ export function PropertiesPanel({
           </Field>
         </Section>
       )}
+
+      {clip.kind === 'audio' && (
+        <Section title="Music" icon={<Music size={12} />}>
+          <Field label={`Volume — ${Math.round(clip.volume * 100)}%${clip.volume > 1 ? ' (boosted)' : ''}`}>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={clip.volume}
+              onChange={(e) => onChange({ volume: Number(e.target.value) } as Partial<Clip>)}
+              style={{ accentColor: '#8b5cf6' }}
+              className="h-1.5 w-full cursor-pointer"
+            />
+          </Field>
+          <Field label={`Playback speed — ${clip.speed.toFixed(2)}x`}>
+            <input
+              type="range"
+              min={0.25}
+              max={4}
+              step={0.25}
+              value={clip.speed}
+              onChange={(e) => onChange({ speed: Number(e.target.value) } as Partial<Clip>)}
+              style={{ accentColor: '#8b5cf6' }}
+              className="h-1.5 w-full cursor-pointer"
+            />
+          </Field>
+          {onToggleSnapToBeats && (
+            <button
+              type="button"
+              onClick={onToggleSnapToBeats}
+              className={cn(
+                'flex items-center justify-center gap-2 rounded-lg border border-panel-border px-3 py-2 text-xs font-medium transition-colors',
+                snapToBeatsActive
+                  ? 'bg-gradient-brand text-white'
+                  : 'bg-panel/60 text-ink-muted hover:text-ink',
+              )}
+            >
+              <Activity size={13} />
+              {snapToBeatsActive ? 'Beat markers on — snapping enabled' : 'Detect beats & snap to them'}
+            </button>
+          )}
+        </Section>
+      )}
+
+      <Section title="Fade in/out" icon={<Sparkles size={12} />}>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={`Fade in — ${clip.fadeInFrames}f`}>
+            <input
+              type="range"
+              min={0}
+              max={60}
+              step={1}
+              value={clip.fadeInFrames}
+              onChange={(e) => onChange({ fadeInFrames: Number(e.target.value) } as Partial<Clip>)}
+              style={{ accentColor: '#8b5cf6' }}
+              className="h-1.5 w-full cursor-pointer"
+            />
+          </Field>
+          <Field label={`Fade out — ${clip.fadeOutFrames}f`}>
+            <input
+              type="range"
+              min={0}
+              max={60}
+              step={1}
+              value={clip.fadeOutFrames}
+              onChange={(e) => onChange({ fadeOutFrames: Number(e.target.value) } as Partial<Clip>)}
+              style={{ accentColor: '#8b5cf6' }}
+              className="h-1.5 w-full cursor-pointer"
+            />
+          </Field>
+        </div>
+      </Section>
 
       {clip.kind !== 'audio' && (
         <Section title="Transform" icon={<Move3d size={12} />}>
@@ -215,38 +459,10 @@ export function PropertiesPanel({
       )}
 
       <Section title="Transition in" icon={<Sparkles size={12} />}>
-        <Segmented
-          value={clip.transition?.type ?? 'none'}
-          onChange={(type) =>
-            onChange({
-              transition: { type, durationFrames: clip.transition?.durationFrames ?? 15 },
-            } as Partial<Clip>)
-          }
-          options={[
-            { value: 'none', label: 'None' },
-            { value: 'fade', label: 'Fade' },
-            { value: 'wipe', label: 'Wipe' },
-            { value: 'slide', label: 'Slide' },
-          ]}
+        <TransitionEditor
+          transition={clip.transition}
+          onChange={(transition) => onChange({ transition } as Partial<Clip>)}
         />
-        {clip.transition && clip.transition.type !== 'none' && (
-          <Field label={`Duration — ${clip.transition.durationFrames} frames`}>
-            <input
-              type="range"
-              min={2}
-              max={60}
-              step={1}
-              value={clip.transition.durationFrames}
-              onChange={(e) =>
-                onChange({
-                  transition: { type: clip.transition!.type, durationFrames: Number(e.target.value) },
-                } as Partial<Clip>)
-              }
-              style={{ accentColor: '#8b5cf6' }}
-              className="h-1.5 w-full cursor-pointer"
-            />
-          </Field>
-        )}
       </Section>
     </div>
   );

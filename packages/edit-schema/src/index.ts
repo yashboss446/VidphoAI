@@ -22,11 +22,48 @@ export const TransformSchema = z.object({
 });
 export type Transform = z.infer<typeof TransformSchema>;
 
+export const TransitionDirectionSchema = z.enum(['left', 'right', 'up', 'down']);
+export type TransitionDirection = z.infer<typeof TransitionDirectionSchema>;
+
 export const TransitionSchema = z.object({
-  type: z.enum(['none', 'fade', 'wipe', 'slide']),
+  type: z.enum(['none', 'fade', 'wipe', 'slide', 'zoom', 'circle', 'blur', 'flip']),
   durationFrames: z.number().int().nonnegative(),
+  // Used by wipe/slide/circle; ignored by fade/zoom/blur/flip.
+  direction: TransitionDirectionSchema.default('left'),
 });
 export type Transition = z.infer<typeof TransitionSchema>;
+
+export const FilterPresetSchema = z.enum([
+  'none',
+  'warm',
+  'cool',
+  'vintage',
+  'bw',
+  'vivid',
+  'fade',
+  'matte',
+]);
+export type FilterPreset = z.infer<typeof FilterPresetSchema>;
+
+export const TextFontFamilySchema = z.enum([
+  'inter',
+  'sora',
+  'poppins',
+  'bebasNeue',
+  'caveat',
+  'playfairDisplay',
+]);
+export type TextFontFamily = z.infer<typeof TextFontFamilySchema>;
+
+export const TextAnimationSchema = z.enum([
+  'none',
+  'typewriter',
+  'wordFade',
+  'popIn',
+  'bounceIn',
+  'slideIn',
+]);
+export type TextAnimation = z.infer<typeof TextAnimationSchema>;
 
 const ClipBaseSchema = z.object({
   id: z.string(),
@@ -37,18 +74,32 @@ const ClipBaseSchema = z.object({
   sourceInFrame: z.number().int().nonnegative().default(0),
   transform: TransformSchema.default({}),
   transition: TransitionSchema.optional(),
+  // Volume/opacity ramps at the clip's own edges — independent of the entry transition.
+  fadeInFrames: z.number().int().nonnegative().default(0),
+  fadeOutFrames: z.number().int().nonnegative().default(0),
 });
 
 export const VideoClipSchema = ClipBaseSchema.extend({
   kind: z.literal('video'),
   assetId: z.string(),
-  volume: z.number().min(0).max(1).default(1),
+  volume: z.number().min(0).max(2).default(1),
+  speed: z.number().min(0.25).max(4).default(1),
+  flipHorizontal: z.boolean().default(false),
+  flipVertical: z.boolean().default(false),
+  filter: FilterPresetSchema.default('none'),
+  brightness: z.number().min(0).max(200).default(100),
+  contrast: z.number().min(0).max(200).default(100),
 });
 export type VideoClip = z.infer<typeof VideoClipSchema>;
 
 export const ImageClipSchema = ClipBaseSchema.extend({
   kind: z.literal('image'),
   assetId: z.string(),
+  flipHorizontal: z.boolean().default(false),
+  flipVertical: z.boolean().default(false),
+  filter: FilterPresetSchema.default('none'),
+  brightness: z.number().min(0).max(200).default(100),
+  contrast: z.number().min(0).max(200).default(100),
 });
 export type ImageClip = z.infer<typeof ImageClipSchema>;
 
@@ -59,6 +110,14 @@ export const TextClipSchema = ClipBaseSchema.extend({
     fontSize: z.number().positive().default(64),
     color: z.string().default('#ffffff'),
     position: z.enum(['top', 'center', 'bottom']).default('bottom'),
+    fontFamily: TextFontFamilySchema.default('sora'),
+    fontWeight: z.enum(['normal', 'bold']).default('bold'),
+    italic: z.boolean().default(false),
+    align: z.enum(['left', 'center', 'right']).default('center'),
+    letterSpacing: z.number().default(0),
+    stroke: z.object({ width: z.number().positive(), color: z.string() }).optional(),
+    background: z.object({ color: z.string(), opacity: z.number().min(0).max(1) }).optional(),
+    animation: TextAnimationSchema.default('none'),
   }),
 });
 export type TextClip = z.infer<typeof TextClipSchema>;
@@ -66,7 +125,8 @@ export type TextClip = z.infer<typeof TextClipSchema>;
 export const AudioClipSchema = ClipBaseSchema.extend({
   kind: z.literal('audio'),
   assetId: z.string(),
-  volume: z.number().min(0).max(1).default(1),
+  volume: z.number().min(0).max(2).default(1),
+  speed: z.number().min(0.25).max(4).default(1),
 });
 export type AudioClip = z.infer<typeof AudioClipSchema>;
 

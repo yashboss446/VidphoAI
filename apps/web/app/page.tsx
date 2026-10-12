@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/apiClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Plus, LogOut, Clapperboard, Film } from 'lucide-react';
+import { Plus, LogOut, Clapperboard, Film, Trash2 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { formatRelativeTime } from '@/lib/time';
@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const { status, logout } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
@@ -33,6 +35,14 @@ export default function DashboardPage() {
       .then((res) => res.json())
       .then((data) => setProjects(data.projects ?? []));
   }, [status]);
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    const res = await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
+    setDeletingId(null);
+    setConfirmingId(null);
+    if (res.ok) setProjects((prev) => prev.filter((p) => p.id !== id));
+  }
 
   if (status !== 'authenticated') {
     return (
@@ -81,10 +91,11 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: i * 0.04 }}
+                className="group relative"
               >
                 <Link
                   href={`/projects/${project.id}`}
-                  className="group block overflow-hidden rounded-2xl border border-panel-border bg-panel/50 transition-all hover:-translate-y-1 hover:border-white/15 hover:shadow-panel"
+                  className="block overflow-hidden rounded-2xl border border-panel-border bg-panel/50 transition-all hover:-translate-y-1 hover:border-white/15 hover:shadow-panel"
                 >
                   <div
                     className={`relative flex h-32 items-center justify-center bg-gradient-to-br ${gradientFromId(project.id)}`}
@@ -99,6 +110,46 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </Link>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setConfirmingId(project.id);
+                  }}
+                  title="Delete project"
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-white/80 opacity-0 backdrop-blur transition-all hover:bg-danger hover:text-white group-hover:opacity-100"
+                >
+                  <Trash2 size={14} />
+                </button>
+
+                {confirmingId === project.id && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-surface/95 p-4 text-center backdrop-blur-sm"
+                  >
+                    <p className="text-sm text-ink">
+                      Delete &ldquo;{project.name}&rdquo;?
+                      <br />
+                      <span className="text-xs text-ink-faint">This can&apos;t be undone.</span>
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setConfirmingId(null)}
+                        className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        disabled={deletingId === project.id}
+                        className="rounded-lg bg-danger px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        {deletingId === project.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
               </motion.div>
             ))}
           </div>

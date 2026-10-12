@@ -3,11 +3,12 @@
 import { useRef } from 'react';
 import { Film, Image as ImageIcon, Music, Type } from 'lucide-react';
 import type { Clip } from '@editor/edit-schema';
-import { framesToPixels, PIXELS_PER_FRAME, TRACK_GRADIENTS } from '@/lib/timeline';
+import { framesToPixels, PIXELS_PER_FRAME, TRACK_GRADIENTS, snapFrame } from '@/lib/timeline';
 import { cn } from '@/lib/cn';
 import { Waveform } from './Waveform';
 
 const MIN_DURATION_FRAMES = 2;
+const SNAP_THRESHOLD_FRAMES = 6;
 
 const KIND_ICON = {
   video: Film,
@@ -16,6 +17,18 @@ const KIND_ICON = {
   text: Type,
 } as const;
 
+/** Snaps a clip-move's proposed start frame to the nearest candidate, trying the
+ * clip's leading edge first and its trailing edge second (so it also snaps when
+ * being butted up against the following clip, not just when its own start lines up). */
+function snapMoveStart(rawStart: number, durationFrames: number, candidates: number[]): number {
+  const snappedStart = snapFrame(rawStart, candidates, SNAP_THRESHOLD_FRAMES);
+  if (snappedStart !== rawStart) return snappedStart;
+  const rawEnd = rawStart + durationFrames;
+  const snappedEnd = snapFrame(rawEnd, candidates, SNAP_THRESHOLD_FRAMES);
+  if (snappedEnd !== rawEnd) return snappedEnd - durationFrames;
+  return rawStart;
+}
+
 export function ClipBlock({
   clip,
   trackType,
@@ -23,6 +36,8 @@ export function ClipBlock({
   onSelect,
   onChange,
   assetUrl,
+  snapCandidates = [],
+  beatFrames = [],
 }: {
   clip: Clip;
   trackType: string;
@@ -30,6 +45,8 @@ export function ClipBlock({
   onSelect: () => void;
   onChange: (patch: Partial<Clip>) => void;
   assetUrl?: string;
+  snapCandidates?: number[];
+  beatFrames?: number[];
 }) {
   const dragState = useRef<{
     mode: 'move' | 'trim-start' | 'trim-end';
@@ -59,9 +76,12 @@ export function ClipBlock({
     const frameDelta = Math.round((e.clientX - drag.startX) / PIXELS_PER_FRAME);
 
     if (drag.mode === 'move') {
-      onChange({ startFrame: Math.max(0, drag.startFrame + frameDelta) } as Partial<Clip>);
+      const rawStart = Math.max(0, drag.startFrame + frameDelta);
+      const newStart = snapMoveStart(rawStart, drag.durationFrames, snapCandidates);
+      onChange({ startFrame: Math.max(0, newStart) } as Partial<Clip>);
     } else if (drag.mode === 'trim-start') {
-      const newStart = Math.max(0, drag.startFrame + frameDelta);
+      const rawStart = Math.max(0, drag.startFrame + frameDelta);
+      const newStart = snapFrame(rawStart, snapCandidates, SNAP_THRESHOLD_FRAMES);
       const newDuration = drag.durationFrames - (newStart - drag.startFrame);
       if (newDuration >= MIN_DURATION_FRAMES) {
         onChange({
@@ -71,7 +91,9 @@ export function ClipBlock({
         } as Partial<Clip>);
       }
     } else if (drag.mode === 'trim-end') {
-      const newDuration = Math.max(MIN_DURATION_FRAMES, drag.durationFrames + frameDelta);
+      const rawEnd = drag.startFrame + drag.durationFrames + frameDelta;
+      const snappedEnd = snapFrame(rawEnd, snapCandidates, SNAP_THRESHOLD_FRAMES);
+      const newDuration = Math.max(MIN_DURATION_FRAMES, snappedEnd - drag.startFrame);
       onChange({ durationFrames: newDuration } as Partial<Clip>);
     }
   }
@@ -101,7 +123,12 @@ export function ClipBlock({
     >
       {clip.kind === 'audio' && assetUrl && (
         <div className="absolute inset-0 px-1 py-1.5 opacity-70">
-          <Waveform url={assetUrl} />
+          <Waveform
+            url={assetUrl}
+            beatPositions={beatFrames
+              .filter((f) => f >= clip.startFrame && f <= clip.startFrame + clip.durationFrames)
+              .map((f) => (f - clip.startFrame) / clip.durationFrames)}
+          />
         </div>
       )}
       <div
@@ -116,7 +143,7 @@ export function ClipBlock({
       </div>
       <div
         onPointerDown={(e) => beginDrag('trim-end', e)}
-        className="absolute right-0 top-0 z-10 h-full w-2 cursor-ew-resize rounded-r-lg bg-white/0 transition-colors hover:bg-white/30"
+        className="absolute right-0 top-0 z-10 h-full w-2 cursor-ew-resize rounded-l-lg bg-white/0 transition-colors hover:bg-white/30"
       />
     </div>
   );

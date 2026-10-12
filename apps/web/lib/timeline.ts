@@ -8,6 +8,20 @@ export function pixelsToFrames(pixels: number) {
   return Math.max(0, Math.round(pixels / PIXELS_PER_FRAME));
 }
 
+/** Snaps `target` to the nearest candidate frame within `thresholdFrames`, or returns `target` unchanged. */
+export function snapFrame(target: number, candidates: number[], thresholdFrames: number): number {
+  let best = target;
+  let bestDist = thresholdFrames;
+  for (const candidate of candidates) {
+    const dist = Math.abs(candidate - target);
+    if (dist <= bestDist) {
+      bestDist = dist;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
 export const TRACK_COLORS: Record<string, string> = {
   video: '#6366f1',
   overlay: '#22d3ee',

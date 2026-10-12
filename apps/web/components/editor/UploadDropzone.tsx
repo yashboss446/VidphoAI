@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { apiFetch } from '@/lib/apiClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { useMediaUpload } from '@/lib/useMediaUpload';
 
 export interface UploadedAsset {
   id: string;
@@ -26,46 +26,14 @@ export function UploadDropzone({
   projectId: string;
   onUploaded: (asset: UploadedAsset) => void;
 }) {
-  const [uploading, setUploading] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { uploadFiles, uploading, error } = useMediaUpload(projectId);
 
   const onDrop = useCallback(
     async (files: File[]) => {
-      setError(null);
-      for (const file of files) {
-        setUploading((u) => [...u, file.name]);
-        try {
-          const presignRes = await apiFetch(`/api/projects/${projectId}/upload`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, contentType: file.type }),
-          });
-          if (!presignRes.ok) throw new Error('Failed to get upload URL');
-          const { uploadUrl, key } = await presignRes.json();
-
-          const putRes = await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': file.type },
-            body: file,
-          });
-          if (!putRes.ok) throw new Error('Upload to storage failed');
-
-          const registerRes = await apiFetch(`/api/projects/${projectId}/media`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, filename: file.name, contentType: file.type }),
-          });
-          if (!registerRes.ok) throw new Error('Failed to register media');
-          const { mediaAsset } = await registerRes.json();
-          onUploaded(mediaAsset);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Upload failed');
-        } finally {
-          setUploading((u) => u.filter((name) => name !== file.name));
-        }
-      }
+      const uploaded = await uploadFiles(files);
+      uploaded.forEach(onUploaded);
     },
-    [projectId, onUploaded],
+    [uploadFiles, onUploaded],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

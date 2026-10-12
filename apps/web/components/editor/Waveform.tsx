@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getWaveformPeaks } from '@/lib/waveform';
 
-export function Waveform({ url }: { url: string }) {
+export function Waveform({ url, beatPositions = [] }: { url: string; beatPositions?: number[] }) {
   const [peaks, setPeaks] = useState<number[] | null>(null);
 
   useEffect(() => {
@@ -41,6 +41,9 @@ export function Waveform({ url }: { url: string }) {
           />
         );
       })}
+      {beatPositions.map((pos, i) => (
+        <rect key={`beat-${i}`} x={pos * 100} y={0} width={0.6} height={100} fill="rgba(255,255,255,0.9)" />
+      ))}
     </svg>
   );
 }

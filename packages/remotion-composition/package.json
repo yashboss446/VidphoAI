@@ -8,6 +8,7 @@
   "dependencies": {
     "@editor/edit-schema": "workspace:*",
     "remotion": "4.0.526",
+    "@remotion/google-fonts": "4.0.526",
     "react": "^18.3.0"
   },
   "devDependencies": {

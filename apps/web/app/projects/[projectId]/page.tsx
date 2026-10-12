@@ -5,9 +5,10 @@ import { useAuth } from '@/lib/AuthProvider';
 import { apiFetch } from '@/lib/apiClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Undo2, Redo2, Type as TypeIcon } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Type as TypeIcon, Scissors, CopyPlus } from 'lucide-react';
 import { useEditStore } from '@/lib/editStore';
 import { trackByType, clipForAsset, newTextClip } from '@/lib/clipFactory';
+import { detectBeats } from '@/lib/beatDetection';
 import { UploadDropzone, type UploadedAsset } from '@/components/editor/UploadDropzone';
 import { MediaBin } from '@/components/editor/MediaBin';
 import { RemotionStage } from '@/components/editor/RemotionStage';
@@ -29,12 +30,20 @@ export default function EditorPage({ params }: { params: { projectId: string } }
 
   const plan = useEditStore((s) => s.plan);
   const selectedClipId = useEditStore((s) => s.selectedClipId);
+  const playheadFrame = useEditStore((s) => s.playheadFrame);
+  const beatFrames = useEditStore((s) => s.beatFrames);
+  const beatFramesClipId = useEditStore((s) => s.beatFramesClipId);
+  const setBeatFrames = useEditStore((s) => s.setBeatFrames);
+  const clearBeatFrames = useEditStore((s) => s.clearBeatFrames);
   const loadPlan = useEditStore((s) => s.loadPlan);
   const addClip = useEditStore((s) => s.addClip);
   const updateClip = useEditStore((s) => s.updateClip);
   const removeClip = useEditStore((s) => s.removeClip);
+  const splitClip = useEditStore((s) => s.splitClip);
+  const duplicateClip = useEditStore((s) => s.duplicateClip);
   const setCanvasSize = useEditStore((s) => s.setCanvasSize);
   const selectClip = useEditStore((s) => s.selectClip);
+  const setPlayhead = useEditStore((s) => s.setPlayhead);
   const undo = useEditStore((s) => s.undo);
   const redo = useEditStore((s) => s.redo);
 
@@ -81,15 +90,45 @@ export default function EditorPage({ params }: { params: { projectId: string } }
     return plan.tracks.find((t) => t.clips.some((c) => c.id === selectedClipId))?.id ?? null;
   }, [plan, selectedClipId]);
 
-  function handleAddAsset(asset: UploadedAsset) {
-    const { trackType, clip } = clipForAsset(plan, asset);
+  function handleAddAsset(asset: UploadedAsset, atFrame?: number) {
+    const { trackType, clip } = clipForAsset(plan, asset, atFrame);
     const track = trackByType(plan, trackType);
     addClip(track.id, clip);
   }
 
-  function handleAddText() {
+  function handleUploadedToTrack(asset: UploadedAsset, atFrame?: number) {
+    setAssets((prev) => [...prev, asset]);
+    handleAddAsset(asset, atFrame);
+  }
+
+  function handleAddText(atFrame?: number) {
     const track = trackByType(plan, 'text');
-    addClip(track.id, newTextClip(plan));
+    addClip(track.id, newTextClip(plan, atFrame));
+  }
+
+  async function handleToggleSnapToBeats() {
+    if (!selectedClip || selectedClip.kind !== 'audio') return;
+    if (beatFramesClipId === selectedClip.id) {
+      clearBeatFrames();
+      return;
+    }
+    const url = assetUrls[selectedClip.assetId];
+    if (!url) return;
+    const beatsSec = await detectBeats(url);
+    setBeatFrames(
+      selectedClip.id,
+      beatsSec.map((s) => Math.round(s * plan.fps)),
+    );
+  }
+
+  function handleSplit() {
+    if (!selectedTrackId || !selectedClipId) return;
+    splitClip(selectedTrackId, selectedClipId, playheadFrame);
+  }
+
+  function handleDuplicate() {
+    if (!selectedTrackId || !selectedClipId) return;
+    duplicateClip(selectedTrackId, selectedClipId);
   }
 
   if (!loaded) {
@@ -116,8 +155,14 @@ export default function EditorPage({ params }: { params: { projectId: string } }
           <ToolbarButton onClick={redo} title="Redo">
             <Redo2 size={15} />
           </ToolbarButton>
-          <ToolbarButton onClick={handleAddText} title="Add text">
+          <ToolbarButton onClick={() => handleAddText()} title="Add text">
             <TypeIcon size={15} />
+          </ToolbarButton>
+          <ToolbarButton onClick={handleSplit} title="Split at playhead" disabled={!selectedClipId}>
+            <Scissors size={15} />
+          </ToolbarButton>
+          <ToolbarButton onClick={handleDuplicate} title="Duplicate clip" disabled={!selectedClipId}>
+            <CopyPlus size={15} />
           </ToolbarButton>
           <CanvasRatioControl width={plan.width} height={plan.height} onChange={setCanvasSize} />
           <div className="mx-1 h-6 w-px bg-panel-border" />
@@ -136,7 +181,16 @@ export default function EditorPage({ params }: { params: { projectId: string } }
         </aside>
 
         <section className="min-h-[360px]">
-          <RemotionStage editPlan={plan} assetUrls={assetUrls} />
+          <RemotionStage
+            editPlan={plan}
+            assetUrls={assetUrls}
+            playheadFrame={playheadFrame}
+            onFrameChange={setPlayhead}
+            selectedClip={selectedClip}
+            onChangeSelectedClip={(patch) =>
+              selectedTrackId && selectedClipId && updateClip(selectedTrackId, selectedClipId, patch)
+            }
+          />
         </section>
 
         <aside className="lg:overflow-y-auto">
@@ -147,6 +201,8 @@ export default function EditorPage({ params }: { params: { projectId: string } }
                 selectedTrackId && selectedClipId && updateClip(selectedTrackId, selectedClipId, patch)
               }
               onDelete={() => selectedTrackId && selectedClipId && removeClip(selectedTrackId, selectedClipId)}
+              snapToBeatsActive={!!selectedClip && beatFramesClipId === selectedClip.id}
+              onToggleSnapToBeats={handleToggleSnapToBeats}
             />
           </PanelCard>
         </aside>
@@ -155,10 +211,16 @@ export default function EditorPage({ params }: { params: { projectId: string } }
       <div className="flex flex-col gap-4 px-4 pb-4">
         <Timeline
           editPlan={plan}
+          projectId={projectId}
           selectedClipId={selectedClipId}
           onSelectClip={selectClip}
           onChangeClip={(trackId, clipId, patch) => updateClip(trackId, clipId, patch)}
+          onAddAsset={handleUploadedToTrack}
+          onAddText={handleAddText}
           assetUrls={assetUrls}
+          playheadFrame={playheadFrame}
+          onSeek={setPlayhead}
+          beatFrames={beatFrames}
         />
         <ChatPanel projectId={projectId} />
       </div>
@@ -179,16 +241,19 @@ function ToolbarButton({
   children,
   onClick,
   title,
+  disabled,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   title: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-panel-hover hover:text-ink"
+      disabled={disabled}
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-panel-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
     >
       {children}
     </button>
